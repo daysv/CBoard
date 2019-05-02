@@ -493,6 +493,25 @@ cBoard.service('dataService', function ($http, $q, updateService) {
         var valueSeries = _.filter(aggData.columnList, function (e) {
             return e.aggType;
         });
+
+        var sumTask = {};
+        var sumNewData = function (k, data, v) {
+            var c = k.substring(0, k.lastIndexOf('-'));
+            var key = c + '-合计';
+            var value;
+            if (_.isUndefined(data[key])) {
+                value = v;
+            } else {
+                value = data[key] + v;
+            }
+            if (k) {
+                sumNewData(c, data, v);
+                data[key] = value;
+            } else {
+                data[key.substring(1, key.length)] = value;
+            }
+        };
+
         for (var i = 0; i < aggData.data.length; i++) {
             //组合keys
             var newKey = getRowElements(aggData.data[i], keysIdx);
@@ -522,9 +541,38 @@ cBoard.service('dataService', function ($http, $q, updateService) {
                 // if (_.isUndefined(newData[newGroup][dSeries.name][dSeries.aggType][jk])) {
                 //     newData[newGroup][dSeries.name][dSeries.aggType][jk] = [];
                 // }
-                newData[newGroup][dSeries.name][dSeries.aggType][jk] = parseFloat(aggData.data[i][dSeries.index]);
+                var result = parseFloat(aggData.data[i][dSeries.index]);
+                newData[newGroup][dSeries.name][dSeries.aggType][jk] = result;
+
+                if (true) {
+                    sumNewData(jk, newData[newGroup][dSeries.name][dSeries.aggType], result);
+                }
             });
         }
+
+        var totalCol = {};
+        var addTotalCol = function (data, index) {
+            var r = _.chain(data)
+                .map(function (v) {
+                    return v.split('-').slice(0, index).join('-');
+                })
+                .uniq()
+                .map(function (v) {
+                    var s = ['合计'];
+                    var row = v ? v.split('-').concat(s) : s;
+                    castedKeys.push(row);
+                    return v;
+                })
+                .value();
+            if (index > 0) {
+                addTotalCol(r, index - 1)
+            }
+        };
+        if (true) {
+            var tmp = Object.keys(joinedKeys);
+            addTotalCol(tmp, keysIdx.length - 1)
+        }
+
         //sort dimension
         var getSort = function (sort) {
             return function (a, b) {
